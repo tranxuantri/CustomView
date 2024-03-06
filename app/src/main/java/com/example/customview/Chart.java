@@ -28,7 +28,7 @@ public class Chart extends View {
 
     private void init() {
         paint = new Paint();
-        paint.setColor(Color.MAGENTA);
+        paint.setColor(Color.BLACK);
         paint.setStrokeWidth(2f);
         paint2 = new Paint();
         paint2.setColor(Color.BLUE);
