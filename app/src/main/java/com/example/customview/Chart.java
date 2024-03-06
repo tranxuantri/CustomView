@@ -28,8 +28,8 @@ public class Chart extends View {
 
     private void init() {
         paint = new Paint();
-        paint.setColor(Color.BLACK);
-        paint.setStrokeWidth(2f);
+        paint.setColor(Color.BLUE);
+        paint.setStrokeWidth(15f);
         paint2 = new Paint();
         paint2.setColor(Color.BLUE);
         paint2.setStrokeWidth(3f);
@@ -43,21 +43,25 @@ public class Chart extends View {
         drawXAxis(canvas);
         drawYAxis(canvas);
         if (mEntryList != null && mEntryList.size() > 0) {
+
             for (int i = 0; i < mEntryList.size() - 1; i++) {
-                float startX1 = Math.round(getWidth() * mEntryList.get(i).getX() * 0.02);
+                float startX1 = i * 20;
                 float startY1 = Math.round((getHeight() - 50) * (mEntryList.get(i).getY() / 1000));
-                float endX1 = Math.round(getWidth() * mEntryList.get(i + 1).getX() * 0.02);
-                float endY1 = Math.round((getHeight() - 50) * (mEntryList.get(i + 1).getY() / 1000));
-                canvas.drawLine(startX1, startY1, endX1, endY1, paint);
+//                float startY2 = Math.round(((getHeight() - 50)/2) * (mEntryList.get(i).getY() / 1000));
+                Log.d("TAG", "onDraw: line 1  " + i + "startX1: " + startX1  );
+//                float endX1 = Math.round(getWidth() * mEntryList.get(i + 1).getX() * 0.02);
+//                float endY1 = Math.round((getHeight() - 50) * (mEntryList.get(i + 1).getY() / 1000));
+                canvas.drawLine(startX1, startY1 / 2, startX1, getHeight() / 2, paint);
+                canvas.drawLine(startX1, getHeight() / 2, startX1, (getHeight()/ 2 + (getHeight()-startY1)/2) , paint);
             }
         }
     }
 
     private void drawXAxis(Canvas canvas) {
-        canvas.drawLine(0, getHeight() - 50, getWidth(), getHeight() - 50, paint2);
+        canvas.drawLine(0, getHeight() / 2, getWidth(), getHeight() / 2, paint2);
         paint.setTextSize(50);
-        canvas.drawText("0", 0, getHeight(), paint);
-        canvas.drawText("50", getWidth() - 50, getHeight(), paint);
+//        canvas.drawText("0", 0, getHeight()/2, paint);
+//        canvas.drawText("50", getWidth() - 50, getHeight()/2, paint);
     }
 
     private void drawYAxis(Canvas canvas) {

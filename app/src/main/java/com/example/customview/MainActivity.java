@@ -100,13 +100,16 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
                         int sum = 0;
-                        index += 2;
-                        for (int i = 0; i < waveform.length; i++) {
-                            sum += waveform[i];
+                        index += 1;
+                        for (byte b : waveform) {
+                            sum += b;
                         }
                         Log.d("TAG", "onWaveFormDataCapture: waveform" + sum / 2);
+
                         entryList.add(new Entry(index, Math.abs(sum / 10)));
+
                         mainBinding.chart.setData(entryList);
+
 
                     }
 
@@ -115,7 +118,8 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                 };
-                visualizer.setDataCaptureListener(captureListener, Visualizer.getMaxCaptureRate() / 2, true, true);
+                Log.d("TAG", "onCreate: Visualizer.getMaxCaptureRate() / 2" + Visualizer.getMaxCaptureRate() / 2);
+                visualizer.setDataCaptureListener(captureListener, Visualizer.getMaxCaptureRate() , true, true);
                 visualizer.setEnabled(true);
             } catch (IOException e) {
                 throw new RuntimeException(e);
