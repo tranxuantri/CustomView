@@ -1,9 +1,7 @@
 package com.example.customview;
 
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.media.audiofx.Visualizer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -25,10 +23,14 @@ import java.util.List;
 import java.util.Random;
 
 @RequiresApi(api = Build.VERSION_CODES.R)
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Timer.OnTimeTickListener {
+    private final String TAG = "MainActivity";
     ActivityMainBinding mainBinding;
     MediaRecorder mediaRecorder;
-    int index = 0;
+    File file;
+    private Timer timer;
+    private boolean isPause = false;
+    private boolean isRecording = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,98 +38,89 @@ public class MainActivity extends AppCompatActivity {
         mainBinding = ActivityMainBinding.inflate(LayoutInflater.from(this));
         setContentView(mainBinding.getRoot());
         final List<Entry> entryList = new ArrayList<>();
-
+        timer = new Timer(this);
         for (int i = 0; i < 50; i++) {
             Entry entry = new Entry(i, generate_random(0, 1000));
             entryList.add(entry);
         }
-        mainBinding.button.setOnClickListener(view -> mainBinding.chart.setData(entryList));
-        mainBinding.stopButton.setEnabled(false);
-        mainBinding.playButton.setEnabled(false);
         mediaRecorder = new MediaRecorder();
 
-        File file = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC) + "/abc.3gp");
-
+        file = new File(getExternalFilesDir(Environment.DIRECTORY_MUSIC) + "/abc.mp3");
         try {
             file.createNewFile();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         mainBinding.recordButton.setOnClickListener(view -> {
-            try {
-                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+            if (!isPause) {
+                if (!isRecording) {
+                    startRecording();
                 } else {
-                    mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                    mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                    mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-                    mediaRecorder.setOutputFile(file);
-                    mediaRecorder.prepare();
-                    mediaRecorder.start();
-                    mainBinding.recordButton.setEnabled(false);
-                    mainBinding.stopButton.setEnabled(true);
-                    Toast.makeText(this, "Record starting ...", Toast.LENGTH_SHORT).show();
+                    pauseRecording();
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } else {
+                resumeRecording();
             }
-
         });
         mainBinding.stopButton.setOnClickListener(view -> {
-            mediaRecorder.stop();
-            mediaRecorder.release();
-
-            mainBinding.recordButton.setEnabled(true);
-            mainBinding.playButton.setEnabled(true);
-            Toast.makeText(this, "Record stopped", Toast.LENGTH_SHORT).show();
-        });
-
-        mainBinding.playButton.setOnClickListener(view -> {
-            try {
-                entryList.clear();
-
-                MediaPlayer mediaPlayer = new MediaPlayer();
-                mediaPlayer.setDataSource(file.getAbsolutePath());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                Toast.makeText(getApplicationContext(), "Playing Audio", Toast.LENGTH_LONG).show();
-                Log.d("TAG", "mainBinding.playButton.setOnClickListener: " + mediaPlayer.getAudioSessionId());
-                Visualizer visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
-                visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[0]);
-
-                Visualizer.OnDataCaptureListener captureListener = new Visualizer.OnDataCaptureListener() {
-
-                    @Override
-                    public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
-                        int sum = 0;
-                        index += 1;
-                        for (byte b : waveform) {
-                            sum += b;
-                        }
-                        Log.d("TAG", "onWaveFormDataCapture: waveform" + sum / 2);
-
-                        entryList.add(new Entry(index, Math.abs(sum / 10)));
-
-                        mainBinding.chart.setData(entryList);
-
-
-                    }
-
-                    @Override
-                    public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
-
-                    }
-                };
-                Log.d("TAG", "onCreate: Visualizer.getMaxCaptureRate() / 2" + Visualizer.getMaxCaptureRate() / 2);
-                visualizer.setDataCaptureListener(captureListener, Visualizer.getMaxCaptureRate() , true, true);
-                visualizer.setEnabled(true);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            stopRecoding();
         });
     }
 
     public int generate_random(int min, int max) {
         return new Random().nextInt((max - min) + 1) + min;
+    }
+
+    public void startRecording() {
+        mainBinding.recordButton.setText("Pause");
+        mainBinding.chart.clear();
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+            return;
+        }
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        mediaRecorder.setOutputFile(file);
+        try {
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+            isRecording = true;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        timer.start();
+    }
+
+    public void pauseRecording() {
+        mediaRecorder.pause();
+        mainBinding.recordButton.setText("Resume");
+
+        isPause = true;
+        isRecording = false;
+        timer.pause();
+    }
+
+    public void resumeRecording() {
+        mediaRecorder.resume();
+        isPause = false;
+        timer.start();
+        isRecording = true;
+    }
+
+    private void stopRecoding() {
+        isPause = false;
+        mediaRecorder.stop();
+        timer.stop();
+        mainBinding.recordButton.setText("Record");
+        Toast.makeText(this, "Record stopped", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onTimerTick(String duration) {
+        mainBinding.timerText.setText(duration);
+        mainBinding.chart.addAmplitude(mediaRecorder.getMaxAmplitude());
+        Log.d(TAG, "onTimerTick: duration " + duration);
     }
 }
